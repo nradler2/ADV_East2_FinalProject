@@ -8,6 +8,19 @@
 #
 
 library(shiny)
+library(leaflet)
+library(sf)
+
+## Set Working Directory to Folder holding app file
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+
+## Load Data Sets
+census = st_read("Data/2020_CensusData/2020_CensusData.shp")
+parks = read.csv("Data/Parks_Locations_and_Features.csv")
+public_facilities = read.csv("Data/Public_Facilities.csv")
+street_lights = read.csv("Data/Street_Lights.csv")
+
+
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(

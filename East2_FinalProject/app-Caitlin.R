@@ -16,6 +16,7 @@ setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 
 ## Load Data Sets
 census = st_read("Data/2020_CensusData/2020_CensusData.shp")
+city_council_districts = st_read("Data/City_Council_Districts/City_Council_Districts.shp")
 parks = read.csv("Data/Parks_Locations_and_Features.csv")
 public_facilities = read.csv("Data/Public_Facilities.csv")
 street_lights = read.csv("Data/Street_Lights.csv")

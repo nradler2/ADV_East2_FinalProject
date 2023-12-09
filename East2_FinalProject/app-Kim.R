@@ -24,6 +24,12 @@ public_facilities = read.csv("Data/Public_Facilities.csv")
 street_lights = read.csv("Data/Street_Lights.csv")
 
 
+# convert parks dataset to spatial + city council districts
+parks_spatial <- parks %>% 
+  st_as_sf(coords = c("Lon","Lat")) %>% 
+  st_set_crs(value = 4326) %>% st_join(city_council_districts)
+
+
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
@@ -33,6 +39,8 @@ ui <- fluidPage(
              tabPanel("Parks",
                       sidebarLayout(
                         sidebarPanel(
+                          h5("Select the park types and districts of interest to adjust the map."),
+                          h5("Click on the points on the map to view more information about the park."),
                           checkboxGroupInput(inputId = "parkstype_check",
                                              label="Park types to show:",
                                              choices=unique(parks_spatial$Park_Type),
@@ -55,11 +63,7 @@ ui <- fluidPage(
 )
 
 server <- function(input, output) {
-  
-  # convert parks dataset to spatial + city council districts
-  parks_spatial <- parks %>% 
-    st_as_sf(coords = c("Lon","Lat")) %>% 
-    st_set_crs(value = 4326) %>% st_join(city_council_districts)
+
   
   parks_spatial$popup <- paste0("<b>",parks_spatial$Park_Name,"</b><br>",
                                 "Type: ",parks_spatial$Park_Type,"<br>",
@@ -72,7 +76,7 @@ server <- function(input, output) {
   # update map based on checkbox selections for park type
     output$parkmap <- renderLeaflet({
 
-        showplot<-leaflet(city_council_spatial) %>%
+        showplot<-leaflet(dplyr::filter(city_council_districts,Dist%in%input$parksdist_check)) %>%
           addPolygons(opacity=0.5)%>%
           addTiles() %>%
           addCircleMarkers(data = dplyr::filter(parks_spatial,Park_Type%in%input$parkstype_check&

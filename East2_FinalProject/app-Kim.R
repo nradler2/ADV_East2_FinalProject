@@ -10,6 +10,8 @@
 library(shiny)
 library(leaflet)
 library(sf)
+library(ggplot2)
+library(RColorBrewer)
 
 ## Set Working Directory to Folder holding app file
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
@@ -27,39 +29,74 @@ street_lights = read.csv("Data/Street_Lights.csv")
 ui <- fluidPage(
   
   # Application title
-  titlePanel("Old Faithful Geyser Data"),
-  
-  # Sidebar with a slider input for number of bins 
-  sidebarLayout(
-    sidebarPanel(
-      sliderInput("bins",
-                  "Number of bins:",
-                  min = 1,
-                  max = 50,
-                  value = 30)
-    ),
-    
-    # Show a plot of the generated distribution
-    mainPanel(
-      plotOutput("distPlot")
-    )
+  navbarPage("South Bend Civic Data Overview",
+             tabPanel("Parks",
+                      sidebarLayout(
+                        sidebarPanel(
+                          checkboxGroupInput(inputId = "parkstype_check",
+                                             label="Park types to show:",
+                                             choices=unique(parks_spatial$Park_Type),
+                                             selected=unique(parks_spatial$Park_Type)),
+                          checkboxGroupInput(inputId = "parksdist_check",
+                                             label="Districts:",
+                                             choices=unique(parks_spatial$Dist),
+                                             selected=unique(parks_spatial$Dist))),
+                        
+                        mainPanel(
+                          wellPanel(fluidRow(h3("South Bend Parks"),
+                                             leafletOutput("parkmap"))),
+                          wellPanel(fluidRow(h3("District-Specific Park Features"),
+                                             plotOutput("dist_park_features")))
+                        )
+                      )),
+             tabPanel("Public Facilities"),
+             tabPanel("Street Lights")
   )
 )
 
-# Define server logic required to draw a histogram
 server <- function(input, output) {
   
-  output$distPlot <- renderPlot({
-    # generate bins based on input$bins from ui.R
-    x    <- faithful[, 2]
-    bins <- seq(min(x), max(x), length.out = input$bins + 1)
-    
-    # draw the histogram with the specified number of bins
-    hist(x, breaks = bins, col = 'darkgray', border = 'white',
-         xlab = 'Waiting time to next eruption (in mins)',
-         main = 'Histogram of waiting times')
-  })
-}
+  # convert parks dataset to spatial + city council districts
+  parks_spatial <- parks %>% 
+    st_as_sf(coords = c("Lon","Lat")) %>% 
+    st_set_crs(value = 4326) %>% st_join(city_council_districts)
+  
+  parks_spatial$popup <- paste0("<b>",parks_spatial$Park_Name,"</b><br>",
+                                "Type: ",parks_spatial$Park_Type,"<br>",
+                                "District: ",parks_spatial$Dist,"<br>",
+                                parks_spatial$Address,"<br>")
+  
+  parks_pal <- colorFactor(palette='Dark2', 
+                           domain=parks_spatial$Park_Type)
+  
+  # update map based on checkbox selections for park type
+    output$parkmap <- renderLeaflet({
 
-# Run the application 
+        showplot<-leaflet(city_council_spatial) %>%
+          addPolygons(opacity=0.5)%>%
+          addTiles() %>%
+          addCircleMarkers(data = dplyr::filter(parks_spatial,Park_Type%in%input$parkstype_check&
+                                                  Dist%in%input$parksdist_check),
+                           popup=~popup,
+                           color=~parks_pal(Park_Type),
+                           stroke=0, fillOpacity = 1, radius = 5)
+    })
+    
+    # summary of district features
+    output$dist_park_features <- renderPlot({
+      ggplot(dplyr::filter(parks_spatial,Dist%in%input$parksdist_check),
+             aes(x=Dist, fill=Park_Type))+
+        geom_bar()+
+        theme_bw()+
+        theme(legend.position = "none")+
+        facet_wrap(~Park_Type)+
+        labs(x="District",
+             y = "Number of Parks",
+             title="Comparison of Park Types per District")+
+        coord_flip()+
+        scale_fill_brewer(palette="Dark2")
+    })
+}
+    
+  # Run the application 
 shinyApp(ui = ui, server = server)

@@ -35,8 +35,10 @@ public_facilities.spatial$popup <- paste("<b>",public_facilities$POPL_NAME,"</b>
                                  "Address:", public_facilities$POPL_ADDR1,"<br>",
                                  "Phone Number:", public_facilities$POPL_PHONE, "<br>")
 
-facilities_pal <- colorFactor(pal = c("#d95f02", "#1b9e77", "#7570b3"), 
+facilities_pal = colorFactor(pal = c("#d95f02", "#1b9e77", "#7570b3"), 
                               domain = public_facilities.spatial$POPL_TYPE)
+
+districts_pal = colorFactor(pal = 'Set1', domain = city_council_districts$Dist)
 
 
 
@@ -56,8 +58,8 @@ ui <- navbarPage(
       checkboxGroupInput(
         inputId = "DistFilterInput",
         label = "Select District",
-        choices = unique(public_facilities.spatial$Dist),
-        selected = unique(public_facilities.spatial$Dist)
+        choices = unique(city_council_districts$Dist),
+        selected = unique(city_council_districts$Dist)
       ) ## END District Input
     ), ## END SIDEBAR PANEL
     mainPanel(
@@ -94,7 +96,8 @@ server <- function(input, output) {
   # create leaflet map
   output$facilitiesMapOutput = renderLeaflet({
     leaflet(city_council_districts_filtered()) %>%
-      addPolygons(opacity = 0.3) %>%
+      addPolygons(opacity = 0.3,
+                  color = ~districts_pal(Dist)) %>%
       addTiles() %>%
       addCircleMarkers(data = pub_facility_filter(),
                        popup = ~popup,

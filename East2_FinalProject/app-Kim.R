@@ -12,6 +12,9 @@ library(leaflet)
 library(sf)
 library(ggplot2)
 library(RColorBrewer)
+library(DT)
+library(tidyverse)
+library(tidyr)
 
 ## Set Working Directory to Folder holding app file
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
@@ -28,6 +31,16 @@ street_lights = read.csv("Data/Street_Lights.csv")
 parks_spatial <- parks %>% 
   st_as_sf(coords = c("Lon","Lat")) %>% 
   st_set_crs(value = 4326) %>% st_join(city_council_districts)
+
+parks_features_long <- as.data.frame(parks_spatial) %>%
+  dplyr::select(Dist, Park_Name, Park_Type, Concessions,
+                Event_Space, Garden__Community, Picnic_Grounds)%>%
+  pivot_longer(cols=-c(Dist, Park_Name, Park_Type),
+               names_to="park_feature",
+               values_to="count")%>%
+  group_by(Dist, Park_Type, park_feature)%>%
+  summarise(count=sum(count, na.rm=TRUE))%>%
+  ungroup()
 
 
 
@@ -53,6 +66,8 @@ ui <- fluidPage(
                         mainPanel(
                           wellPanel(fluidRow(h3("South Bend Parks"),
                                              leafletOutput("parkmap"))),
+                          wellPanel(fluidRow(h3("District-Specific Park Types"),
+                                             plotOutput("dist_park_types"))),
                           wellPanel(fluidRow(h3("District-Specific Park Features"),
                                              plotOutput("dist_park_features")))
                         )
@@ -87,7 +102,7 @@ server <- function(input, output) {
     })
     
     # summary of district features
-    output$dist_park_features <- renderPlot({
+    output$dist_park_types <- renderPlot({
       ggplot(dplyr::filter(parks_spatial,Dist%in%input$parksdist_check),
              aes(x=Dist, fill=Park_Type))+
         geom_bar()+
@@ -97,6 +112,23 @@ server <- function(input, output) {
         labs(x="District",
              y = "Number of Parks",
              title="Comparison of Park Types per District")+
+        coord_flip()+
+        scale_fill_brewer(palette="Dark2")
+    })
+    
+    # summary of district features
+    output$dist_park_features <- renderPlot({
+      ggplot(dplyr::filter(parks_features_long,Dist%in%input$parksdist_check),
+             aes(x=park_feature,
+                 fill=Park_Type,
+                 y=count))+
+        geom_bar(stat="identity")+
+        theme_bw()+
+        facet_wrap(~Dist)+
+        labs(x="Feature",
+             y = "Number of Parks",
+             fill="Park Type",
+             title="Comparison of Park Features per District")+
         coord_flip()+
         scale_fill_brewer(palette="Dark2")
     })

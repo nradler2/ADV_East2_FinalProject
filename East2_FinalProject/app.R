@@ -38,7 +38,7 @@ public_facilities.spatial$popup <- paste("<b>",public_facilities$POPL_NAME,"</b>
                                          "Address:", public_facilities$POPL_ADDR1,"<br>",
                                          "Phone Number:", public_facilities$POPL_PHONE, "<br>")
 
-facilities_pal = colorFactor(pal = c("#d95f02", "#1b9e77", "#7570b3"), 
+facilities_pal = colorFactor(pal = "Dark2", #c("#d95f02", "#1b9e77", "#7570b3"), 
                              domain = public_facilities.spatial$POPL_TYPE)
 
 districts_pal = colorFactor(pal = 'Set1', domain = city_council_districts$Dist)
@@ -85,7 +85,7 @@ street_lights.spatial$popup <- paste("<b>", street_lights.spatial$OBJECTID, "</b
                                      "Address", street_lights.spatial$Address, "<br>",
                                      "Type of Street Light", street_lights.spatial$Pole_Type, "<br>")
 
-street_lights_pal <- colorFactor(palette = 'Set1', 
+street_lights_pal <- colorFactor(palette = 'Dark2', 
                                  domain = street_lights.spatial$Pole_Type)
 
 
@@ -100,7 +100,8 @@ ui <- navbarPage(
     title = "Public Facilities",
     
     sidebarPanel(
-      
+      h4("Select the public facility types and districts of interest to adjust the map."),
+      h5("Click on the points on the map to view more information about the facilities"),
       checkboxGroupInput(
         inputId = "facilitiesDomainInput",
         label = "Select Facilities",
@@ -125,8 +126,14 @@ ui <- navbarPage(
                    leafletOutput(outputId = "facilitiesMapOutput")
                    )
                  ),
-        tabPanel("GRAPH"
+        tabPanel(title = "Public Facilities By District",
+                 wellPanel(
+                   fluidRow(
+                     h3("District-Specific Public Facilities"),
+                     plotOutput("dist_public_facilities_types")
+                   )
                  )
+        )
         )
       ) ## END MAIN PANEL
     ), ## END TAB 1
@@ -139,7 +146,7 @@ ui <- navbarPage(
     sidebarLayout(
       
       sidebarPanel(
-        h5("Select the park types and districts of interest to adjust the map."),
+        h4("Select the park types and districts of interest to adjust the map."),
         h5("Click on the points on the map to view more information about the park."),
         checkboxGroupInput(inputId = "parkstype_check",
                            label="Park types to show:",
@@ -148,8 +155,8 @@ ui <- navbarPage(
                            ), ## END CHECKBOX INPUT 1
         checkboxGroupInput(inputId = "parksdist_check",
                            label="Districts:",
-                           choices=unique(parks_spatial$Dist),
-                           selected=unique(parks_spatial$Dist)
+                           choices=unique(city_council_districts$Dist),
+                           selected=unique(city_council_districts$Dist)
                            ) ## END CHECKBOX INPUT 2
         ),
       
@@ -191,6 +198,8 @@ ui <- navbarPage(
     title = "Street Lights",
     sidebarLayout(
       sidebarPanel(
+        h4("Select the street light types and districts of interest to adjust the map."),
+        h5("Click on the points on the map to view more information about the street lights"),
         checkboxGroupInput(
           inputId = "StreetLightInput",
           label = "Street Light Pole Type",
@@ -200,8 +209,8 @@ ui <- navbarPage(
         checkboxGroupInput(
           inputId = "StreetLightDistrict",
           label = "Districts",
-          choices = unique(street_lights.spatial$Dist),
-          selected = unique(street_lights.spatial$Dist)
+          choices = unique(city_council_districts$Dist),
+          selected = unique(city_council_districts$Dist)
         )
       ), ## END SIDEBAR PANEL
       mainPanel(
@@ -212,7 +221,12 @@ ui <- navbarPage(
                      leafletOutput(outputId = "StreetLightsOutput")
                      )
                    ),
-          tabPanel("Light Pole Type by District", plotOutput("dist_streetlight_pole"))
+          tabPanel("Light Pole Type by District", 
+                   wellPanel(
+                     h3("District-Specific Light Pole Types"),
+                     plotOutput("dist_streetlight_pole")
+                     )
+                   )
         )
       ) ## END MAIN PANEL
     ) ## End Sidebar layout
@@ -251,21 +265,41 @@ server <- function(input, output) {
                        stroke = FALSE,
                        fillOpacity = 1
       ) %>%
-      addLegend(pal=facilities_pal, values = pub_facility_filter()$POPL_TYPE)
+      addLegend(title = "Public Facility Type",pal=facilities_pal, values = pub_facility_filter()$POPL_TYPE) %>%
+      addLegend(title = "City Council District", pal=districts_pal, values = pub_facility_filter()$Dist)
   }) ## END DIST MAP
+  
+  # summary of district features
+  output$dist_public_facilities_types <- renderPlot({
+    ggplot(pub_facility_filter(),
+           aes(x=Dist, fill=POPL_TYPE))+
+      geom_bar()+
+      theme_bw()+
+      theme(legend.position = "none")+
+      facet_wrap(~POPL_TYPE)+
+      labs(x="District",
+           y = "Number of Public Facilities",
+           title="Comparison of Public Facilities per District")+
+      coord_flip()+
+      scale_fill_brewer(palette="Dark2")
+  })
   
   ########## PARKS  ########## 
   
   output$parkmap <- renderLeaflet({
     
+    filtered_parks_data = filter(parks_spatial,Park_Type%in%input$parkstype_check&
+                                   Dist%in%input$parksdist_check)
+    
     showplot<-leaflet(dplyr::filter(city_council_districts,Dist%in%input$parksdist_check)) %>%
       addPolygons(opacity=0.5, color = ~districts_pal(Dist))%>%
       addTiles() %>%
-      addCircleMarkers(data = dplyr::filter(parks_spatial,Park_Type%in%input$parkstype_check&
-                                              Dist%in%input$parksdist_check),
+      addCircleMarkers(data = filtered_parks_data,
                        popup=~popup,
                        color=~parks_pal(Park_Type),
-                       stroke=0, fillOpacity = 1, radius = 5)
+                       stroke=0, fillOpacity = 1, radius = 5) %>%
+      addLegend(title = "Park Type",pal=parks_pal, values = filtered_parks_data$Park_Type) %>%
+      addLegend(title = "City Council District", pal=districts_pal, values = filtered_parks_data$Dist)
   })
   
   # summary of district features
@@ -285,7 +319,7 @@ server <- function(input, output) {
   
   # summary of district features
   output$dist_park_features <- renderPlot({
-    ggplot(dplyr::filter(parks_features_long,Dist%in%input$parksdist_check),
+    ggplot(filter(parks_features_long,Dist%in%input$parksdist_check),
            aes(x=park_feature,
                fill=Park_Type,
                y=count))+
@@ -304,15 +338,19 @@ server <- function(input, output) {
   
   output$StreetLightsOutput <- renderLeaflet({
     selected_districts <- input$StreetLightDistrict[!is.na(input$StreetLightDistrict) & input$StreetLightDistrict != "NA"]
-    # Create the leaflet map
+    
+    filtered_street_lights = filter(street_lights.spatial, Pole_Type %in% input$StreetLightInput &
+                                      Dist %in% selected_districts)
+    
     leaflet(dplyr::filter(city_council_districts, Dist %in% selected_districts)) %>%
       addPolygons(opacity = 0.5, color = ~districts_pal(Dist)) %>%
       addTiles() %>%
-      addCircleMarkers(data = dplyr::filter(street_lights.spatial, Pole_Type %in% input$StreetLightInput &
-                                              Dist %in% selected_districts),
+      addCircleMarkers(data = filtered_street_lights,
                        popup = ~popup,
                        color = ~street_lights_pal(Pole_Type),
-                       stroke = 0, fillOpacity = 0.5, radius = 2)
+                       stroke = 0, fillOpacity = 0.4, radius = 2) %>%
+      addLegend(title = "Light Pole Type", pal=street_lights_pal, values = filtered_street_lights$Pole_Type) %>%
+      addLegend(title = "City Council District", pal=districts_pal, values = filtered_street_lights$Dist)
   })
   
   output$dist_streetlight_pole <- renderPlot({

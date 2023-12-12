@@ -81,9 +81,8 @@ street_lights.spatial <- street_lights.spatial %>%
   filter(Pole_Type %in% pole_types)
 
 street_lights.spatial$popup <- paste("<b>", street_lights.spatial$OBJECTID, "</b><br>",
-                                     "Wattage", street_lights.spatial$Wattage, "<br>",
-                                     "Address", street_lights.spatial$Address, "<br>",
-                                     "Type of Street Light", street_lights.spatial$Pole_Type, "<br>")
+                                     "Wattage:", street_lights.spatial$Wattage, "<br>",
+                                     "Type of Street Light:", street_lights.spatial$Pole_Type, "<br>")
 
 street_lights_pal <- colorFactor(palette = 'Dark2', 
                                  domain = street_lights.spatial$Pole_Type)

@@ -16,7 +16,7 @@ library(RColorBrewer)
 library(DT)
 
 ## Set Working Directory to Folder holding app file
-setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+#setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 
 ## Load Data Sets
 census = st_read("Data/2020_CensusData/2020_CensusData.shp")

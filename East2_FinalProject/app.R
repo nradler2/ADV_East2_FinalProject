@@ -34,9 +34,9 @@ public_facilities.spatial = public_facilities %>%
 public_facilities.spatial = st_join(public_facilities.spatial, city_council_districts)
 
 public_facilities.spatial$popup <- paste("<b>",public_facilities$POPL_NAME,"</b><br>",
-                                         "Type:", public_facilities$POPL_TYPE,"<br>",
-                                         "Address:", public_facilities$POPL_ADDR1,"<br>",
-                                         "Phone Number:", public_facilities$POPL_PHONE, "<br>")
+                                         "Type: ", public_facilities$POPL_TYPE,"<br>",
+                                         "Address: ", public_facilities$POPL_ADDR1,"<br>",
+                                         "Phone Number: ", public_facilities$POPL_PHONE, "<br>")
 
 facilities_pal = colorFactor(pal = "Dark2", #c("#d95f02", "#1b9e77", "#7570b3"), 
                              domain = public_facilities.spatial$POPL_TYPE)
@@ -61,7 +61,7 @@ parks_features_long <- as.data.frame(parks_spatial) %>%
 parks_spatial$popup <- paste0("<b>",parks_spatial$Park_Name,"</b><br>",
                               "Type: ",parks_spatial$Park_Type,"<br>",
                               "District: ",parks_spatial$Dist,"<br>",
-                              parks_spatial$Address,"<br>")
+                              "Address: ", parks_spatial$Address,"<br>")
 
 parks_pal <- colorFactor(palette='Dark2', 
                          domain=parks_spatial$Park_Type)
@@ -81,8 +81,8 @@ street_lights.spatial <- street_lights.spatial %>%
   filter(Pole_Type %in% pole_types)
 
 street_lights.spatial$popup <- paste("<b>", street_lights.spatial$OBJECTID, "</b><br>",
-                                     "Wattage:", street_lights.spatial$Wattage, "<br>",
-                                     "Type of Street Light:", street_lights.spatial$Pole_Type, "<br>")
+                                     "Wattage: ", street_lights.spatial$Wattage, "<br>",
+                                     "Type of Street Light: ", street_lights.spatial$Pole_Type, "<br>")
 
 street_lights_pal <- colorFactor(palette = 'Dark2', 
                                  domain = street_lights.spatial$Pole_Type)
